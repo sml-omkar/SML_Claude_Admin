@@ -30,6 +30,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubunt
 .main-area{flex:1;overflow:hidden;display:flex}
 .main-area.view-users .view-users{display:flex}
 .main-area.view-upload .view-upload{display:flex}
+.main-area.view-prung .view-prung{display:flex}
 .main-area.view-conversations .view-conversations{display:flex}
 .view-panel{display:none;flex:1;min-width:0}
 .view-users{flex-direction:row}
@@ -108,6 +109,26 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubunt
 .empty-panel-icon{width:80px;height:80px;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center;margin-bottom:16px;font-size:1.5rem;color:#64748b}
 .empty-panel h3{font-size:1.1rem;font-weight:600;color:#64748b;margin-bottom:4px}
 .empty-panel p{font-size:.85rem;max-width:280px;text-align:center;line-height:1.5}
+.view-prung{padding:32px;overflow-y:auto;background:#f8fafc}
+.prung-filters{display:flex;gap:16px;align-items:flex-end;margin-bottom:24px;flex-wrap:wrap}
+.prung-filters label{font-size:.78rem;font-weight:600;color:#475569;margin-bottom:4px;display:block}
+.prung-filters input[type=date]{padding:8px 12px;border:1px solid #cbd5e1;border-radius:6px;font-size:.85rem;outline:none;background:#fff}
+.prung-filters input[type=date]:focus{border-color:#3b82f6}
+.prung-filters .btn{height:38px;padding:0 20px}
+.prung-table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.prung-table th{padding:14px 16px;text-align:left;font-size:.78rem;font-weight:700;color:#475569;background:#f1f5f9;border-bottom:2px solid #e2e8f0;text-transform:uppercase;letter-spacing:.5px}
+.prung-table td{padding:12px 16px;font-size:.85rem;color:#1e293b;border-bottom:1px solid #f1f5f9}
+.prung-table tr:last-child td{border-bottom:none}
+.prung-table tr:hover td{background:#f8faff}
+.prung-table .total-row{background:#fffbeb}
+.prung-table .total-row td{font-weight:700;color:#1e3c72;border-top:2px solid #fbbf24}
+.prung-table .num{text-align:right;font-variant-numeric:tabular-nums}
+.prung-summary{display:flex;gap:24px;margin-bottom:24px;flex-wrap:wrap}
+.prung-summary-card{background:#fff;border-radius:10px;padding:20px 24px;flex:1;min-width:160px;box-shadow:0 1px 3px rgba(0,0,0,.08);border-left:4px solid #1e3c72}
+.prung-summary-card .label{font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;color:#64748b;font-weight:600;margin-bottom:4px}
+.prung-summary-card .value{font-size:1.6rem;font-weight:700;color:#1e3c72}
+.prung-summary-card.alt{border-left-color:#f59e0b}
+.prung-summary-card.alt .value{color:#d97706}
 @media(max-width:900px){.sidebar{width:60px}
 .sidebar-header{padding:16px}
 .sidebar-header h1,.sidebar-header p,.nav-item span{display:none}
@@ -133,6 +154,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubunt
         <div class="nav-icon">+</div>
         <span>Upload Data</span>
       </div>
+      <div class="nav-item prung" onclick="switchView('prung')">
+        <div class="nav-icon" style="background:#f59e0b">P</div>
+        <span>Prung</span>
+      </div>
     </nav>
   </aside>
 
@@ -149,7 +174,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubunt
     </header>
 
     <div class="main-area view-users" id="mainArea">
-      <!-- Users panel -->
+
       <div class="view-panel view-users">
         <div class="user-panel">
           <div class="user-panel-header">
@@ -170,7 +195,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubunt
         </div>
       </div>
 
-      <!-- Upload panel -->
       <div class="view-panel view-upload">
         <div class="upload-container">
           <div class="upload-header">
@@ -202,6 +226,57 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubunt
           <div class="upload-status" id="uploadStatus"></div>
         </div>
       </div>
+
+      <div class="view-panel view-prung">
+        <div style="max-width:960px;width:100%;margin:0 auto">
+          <h2 style="font-size:1.3rem;font-weight:700;color:#1e293b;margin-bottom:4px">Prung Analytics</h2>
+          <p style="font-size:.85rem;color:#64748b;margin-bottom:24px">Usage stats and message volume per employee</p>
+          <div class="prung-summary">
+            <div class="prung-summary-card">
+              <div class="label">Total Employees</div>
+              <div class="value" id="pTotalUsers">0</div>
+            </div>
+            <div class="prung-summary-card alt">
+              <div class="label">Total Conversations</div>
+              <div class="value" id="pTotalConvs">0</div>
+            </div>
+            <div class="prung-summary-card alt">
+              <div class="label">Total Messages</div>
+              <div class="value" id="pTotalMsgs">0</div>
+            </div>
+            <div class="prung-summary-card alt">
+              <div class="label">Est. Total Tokens</div>
+              <div class="value" id="pTotalTokens">0</div>
+            </div>
+          </div>
+          <div class="prung-filters">
+            <div>
+              <label>From</label>
+              <input type="date" id="prungFrom">
+            </div>
+            <div>
+              <label>To</label>
+              <input type="date" id="prungTo">
+            </div>
+            <button class="btn btn-primary" onclick="renderPrung()" style="height:38px;padding:0 20px">Apply</button>
+            <button class="btn btn-outline" onclick="document.getElementById('prungFrom').value='';document.getElementById('prungTo').value='';renderPrung()" style="height:38px;padding:0 20px">Clear</button>
+          </div>
+          <table class="prung-table">
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Email</th>
+                <th class="num">Conversations</th>
+                <th class="num">Prompts</th>
+                <th class="num">Responses</th>
+                <th class="num">Est. Tokens</th>
+              </tr>
+            </thead>
+            <tbody id="prungBody"></tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -246,8 +321,9 @@ function switchView(view) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.querySelector(`.nav-item.${view}`).classList.add('active');
   const area = document.getElementById('mainArea');
-  area.classList.remove('view-users', 'view-upload', 'view-conversations');
+  area.classList.remove('view-users', 'view-upload', 'view-conversations', 'view-prung');
   area.classList.add(`view-${view}`);
+  if (view === 'prung') renderPrung();
 }
 
 async function loadData() {
@@ -271,6 +347,64 @@ function filterUsers() {
   const q = document.getElementById('userSearch').value.toLowerCase();
   filteredUsers = users.filter(u => u.full_name.toLowerCase().includes(q) || u.email_address.toLowerCase().includes(q));
   renderUsers();
+}
+
+function estTokens(m) {
+  const raw = extractText(m);
+  const chars = raw.length;
+  return Math.round(chars / 4);
+}
+
+function renderPrung() {
+  const fromStr = document.getElementById('prungFrom').value;
+  const toStr = document.getElementById('prungTo').value;
+  const from = fromStr ? new Date(fromStr + 'T00:00:00') : null;
+  const to = toStr ? new Date(toStr + 'T23:59:59') : null;
+
+  const rows = users.map(u => {
+    const ucs = conversations.filter(c => c.account?.uuid === u.uuid);
+    let prompts = 0, responses = 0, tokens = 0, convCount = 0;
+    for (const c of ucs) {
+      const msgs = Array.isArray(c.chat_messages) ? c.chat_messages : [];
+      let hasInRange = false;
+      for (const m of msgs) {
+        const mt = safeDate(m.created_at);
+        if (!mt) continue;
+        if ((from && mt < from) || (to && mt > to)) continue;
+        hasInRange = true;
+        if (m.sender === 'human') prompts++;
+        else if (m.sender === 'assistant') responses++;
+        tokens += estTokens(m);
+      }
+      if (hasInRange) convCount++;
+    }
+    return { name: u.full_name, email: u.email_address, convs: convCount, prompts, responses, tokens };
+  });
+
+  const total = rows.reduce((s, r) => ({ convs: s.convs + r.convs, prompts: s.prompts + r.prompts, responses: s.responses + r.responses, tokens: s.tokens + r.tokens }), { convs: 0, prompts: 0, responses: 0, tokens: 0 });
+
+  document.getElementById('pTotalUsers').textContent = users.length;
+  document.getElementById('pTotalConvs').textContent = total.convs;
+  document.getElementById('pTotalMsgs').textContent = total.prompts + total.responses;
+  document.getElementById('pTotalTokens').textContent = total.tokens.toLocaleString();
+
+  document.getElementById('prungBody').innerHTML = rows.filter(r => r.convs > 0).map(r =>
+    '<tr>' +
+      '<td>' + esc(r.name) + '</td>' +
+      '<td style="color:#64748b;font-size:.8rem">' + esc(r.email) + '</td>' +
+      '<td class="num">' + r.convs + '</td>' +
+      '<td class="num">' + r.prompts + '</td>' +
+      '<td class="num">' + r.responses + '</td>' +
+      '<td class="num">' + r.tokens.toLocaleString() + '</td>' +
+    '</tr>'
+  ).join('') +
+  '<tr class="total-row">' +
+    '<td>Total</td><td></td>' +
+    '<td class="num">' + total.convs + '</td>' +
+    '<td class="num">' + total.prompts + '</td>' +
+    '<td class="num">' + total.responses + '</td>' +
+    '<td class="num">' + total.tokens.toLocaleString() + '</td>' +
+  '</tr>';
 }
 
 function safeDate(v) {
