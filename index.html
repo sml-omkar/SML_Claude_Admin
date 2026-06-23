@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude SML Admin</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,sans-serif;background:#0f172a;min-height:100vh;display:flex}
+.app{display:flex;width:100%;height:100vh}
+.sidebar{width:280px;background:#1e293b;display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:24px 20px;background:linear-gradient(135deg,#1e3c72,#2a5298);border-bottom:3px solid #fbbf24}
+.sidebar-header h1{font-size:1.25rem;font-weight:700;color:#fff;margin-bottom:2px}
+.sidebar-header p{font-size:.8rem;color:#93c5fd;font-weight:500}
+.nav{padding:12px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:8px;cursor:pointer;color:#94a3b8;font-weight:500;font-size:.9rem;transition:all .2s;margin-bottom:4px}
+.nav-item:hover{background:#334155;color:#e2e8f0}
+.nav-item.active{background:#1e40af;color:#fff}
+.nav-item .nav-icon{width:20px;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0}
+.nav-item.users .nav-icon{background:#3b82f6}
+.nav-item.upload .nav-icon{background:#10b981}
+.nav-item.settings .nav-icon{background:#8b5cf6}
+.content{flex:1;display:flex;flex-direction:column;background:#f1f5f9;overflow:hidden}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:#fff;border-bottom:1px solid #e2e8f0}
+.topbar-title{font-size:1.1rem;font-weight:600;color:#1e293b}
+.topbar-info{display:flex;align-items:center;gap:16px;font-size:.85rem;color:#64748b}
+.topbar-stats{display:flex;gap:16px}
+.topbar-stat{display:flex;align-items:center;gap:6px}
+.topbar-stat-val{font-weight:600;color:#1e3c72}
+.main-area{flex:1;overflow:hidden;display:flex}
+.main-area.view-users .view-users{display:flex}
+.main-area.view-upload .view-upload{display:flex}
+.main-area.view-conversations .view-conversations{display:flex}
+.view-panel{display:none;flex:1;min-width:0}
+.view-users{flex-direction:row}
+.user-panel{width:340px;background:#fff;border-right:1px solid #e2e8f0;display:flex;flex-direction:column;flex-shrink:0}
+.user-panel-header{padding:16px;border-bottom:1px solid #e2e8f0}
+.user-search{width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:.85rem;outline:none;transition:border-color .2s}
+.user-search:focus{border-color:#3b82f6}
+.user-list{flex:1;overflow-y:auto;padding:12px}
+.user-card{display:flex;align-items:center;gap:12px;padding:12px;border-radius:8px;cursor:pointer;transition:all .2s;border:1px solid transparent;margin-bottom:6px}
+.user-card:hover{background:#f0f4f8;border-color:#e2e8f0}
+.user-card.selected{background:#eff6ff;border-color:#3b82f6}
+.user-avatar{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#1e3c72,#2a5298);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:.95rem;flex-shrink:0;border:2px solid #fbbf24}
+.user-info{min-width:0;flex:1}
+.user-name{font-weight:600;color:#1e293b;font-size:.9rem;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-email{font-size:.78rem;color:#64748b;margin-bottom:2px}
+.user-stats{display:flex;gap:8px;font-size:.72rem;color:#94a3b8}
+.user-stats span{background:#f1f5f9;padding:2px 6px;border-radius:4px}
+.conversation-panel{flex:1;min-width:0;display:flex;flex-direction:column;background:#f8fafc}
+.conversation-header{padding:20px 24px;background:#fff;border-bottom:1px solid #e2e8f0}
+.conversation-header h2{font-size:1.1rem;font-weight:600;color:#1e293b;margin-bottom:2px}
+.conversation-header p{font-size:.85rem;color:#64748b}
+.conversation-meta{display:flex;gap:20px;margin-top:12px;padding-top:12px;border-top:1px solid #e2e8f0}
+.conversation-meta span{font-size:.8rem;color:#64748b}
+.conversation-meta strong{color:#1e3c72;font-weight:600}
+.messages-view{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:20px 24px}
+.message{margin-bottom:16px;display:flex;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.message.user{justify-content:flex-end}
+.message.claude{justify-content:flex-start}
+.message-bubble{max-width:68%;padding:14px 18px;border-radius:12px;font-size:.9rem;line-height:1.55;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;position:relative}
+.message.user .message-bubble{background:linear-gradient(135deg,#1e3c72,#2a5298);color:#fff;border-bottom-right-radius:4px}
+.message.claude .message-bubble{background:#fff;border:1px solid #e2e8f0;border-left:3px solid #10b981;border-bottom-left-radius:4px}
+.message-sender{font-size:.78rem;font-weight:600;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid rgba(0,0,0,.08);display:flex;align-items:center;gap:8px}
+.message.user .message-sender{border-bottom-color:rgba(255,255,255,.25);color:#bfdbfe}
+.message.claude .message-sender{color:#1e40af}
+.message-text{margin:6px 0;line-height:1.6;white-space:pre-wrap}
+.message-text a{color:inherit}
+.message-actions{font-size:.8rem;color:#64748b;margin-top:4px;line-height:1.8}
+.message-actions span{display:inline-block;background:#f1f5f9;padding:1px 8px;border-radius:4px;margin-right:4px}
+.message-time{font-size:.7rem;margin-top:4px;display:block}
+.message.user .message-time{color:rgba(255,255,255,.7);text-align:right}
+.message.claude .message-time{color:#94a3b8}
+.view-upload{justify-content:center;align-items:center;padding:40px}
+.upload-container{max-width:640px;width:100%}
+.upload-header{text-align:center;margin-bottom:32px}
+.upload-header h2{font-size:1.4rem;font-weight:700;color:#1e293b;margin-bottom:8px}
+.upload-header p{font-size:.9rem;color:#64748b}
+.upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.upload-zone{border:2px dashed #cbd5e1;border-radius:12px;padding:32px 24px;text-align:center;cursor:pointer;transition:all .3s;background:#fff;position:relative}
+.upload-zone:hover{border-color:#3b82f6;background:#f8faff}
+.upload-zone.dragover{border-color:#3b82f6;background:#eff6ff}
+.upload-zone.uploaded{border-color:#10b981;background:#f0fdf4}
+.upload-zone.error{border-color:#ef4444;background:#fef2f2}
+.upload-zone-icon{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:.85rem;font-weight:700}
+.upload-zone.users .upload-zone-icon{background:#dbeafe;color:#1e40af}
+.upload-zone.conversations .upload-zone-icon{background:#dcfce7;color:#166534}
+.upload-zone h3{font-size:.95rem;font-weight:600;color:#1e293b;margin-bottom:4px}
+.upload-zone p{font-size:.8rem;color:#94a3b8;margin-bottom:8px}
+.upload-zone .file-name{font-size:.78rem;color:#10b981;font-weight:500;display:none;margin-top:8px}
+.upload-zone.uploaded .file-name{display:block}
+.upload-zone input[type=file]{display:none}
+.upload-actions{display:flex;gap:12px;justify-content:center;margin-top:24px}
+.btn{padding:10px 20px;border-radius:8px;border:none;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-primary{background:linear-gradient(135deg,#1e3c72,#2a5298);color:#fff}
+.btn-primary:hover{opacity:.9}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.btn-outline{background:transparent;border:1px solid #cbd5e1;color:#64748b}
+.btn-outline:hover{background:#f1f5f9;border-color:#94a3b8}
+.btn-success{background:#10b981;color:#fff}
+.btn-success:hover{opacity:.9}
+.upload-status{margin-top:16px;padding:12px 16px;border-radius:8px;display:none;font-size:.85rem}
+.upload-status.success{display:block;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0}
+.upload-status.error{display:block;background:#fef2f2;color:#991b1b;border:1px solid #fecaca}
+.upload-status .status-details{margin-top:4px;font-size:.78rem;opacity:.8}
+.empty-panel{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#94a3b8;padding:40px}
+.empty-panel-icon{width:80px;height:80px;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center;margin-bottom:16px;font-size:1.5rem;color:#64748b}
+.empty-panel h3{font-size:1.1rem;font-weight:600;color:#64748b;margin-bottom:4px}
+.empty-panel p{font-size:.85rem;max-width:280px;text-align:center;line-height:1.5}
+@media(max-width:900px){.sidebar{width:60px}
+.sidebar-header{padding:16px}
+.sidebar-header h1,.sidebar-header p,.nav-item span{display:none}
+.nav-item{justify-content:center;padding:12px}
+.user-panel{width:260px}
+.upload-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h1>Claude SML Admin</h1>
+      <p>Employee Chat Monitor</p>
+    </div>
+    <nav class="nav">
+      <div class="nav-item users active" onclick="switchView('users')">
+        <div class="nav-icon">U</div>
+        <span>Employees</span>
+      </div>
+      <div class="nav-item upload" onclick="switchView('upload')">
+        <div class="nav-icon">+</div>
+        <span>Upload Data</span>
+      </div>
+    </nav>
+  </aside>
+
+  <div class="content">
+    <header class="topbar">
+      <div class="topbar-title">Claude SML Admin</div>
+      <div class="topbar-info">
+        <div class="topbar-stats">
+          <div class="topbar-stat"><span class="topbar-stat-val" id="statUsers">0</span> employees</div>
+          <div class="topbar-stat"><span class="topbar-stat-val" id="statConvs">0</span> conversations</div>
+          <div class="topbar-stat"><span class="topbar-stat-val" id="statMsgs">0</span> messages</div>
+        </div>
+      </div>
+    </header>
+
+    <div class="main-area view-users" id="mainArea">
+      <!-- Users panel -->
+      <div class="view-panel view-users">
+        <div class="user-panel">
+          <div class="user-panel-header">
+            <input type="text" class="user-search" id="userSearch" placeholder="Search employee name or email..." oninput="filterUsers()">
+          </div>
+          <div class="user-list" id="userList">
+            <div class="empty-panel" style="padding:30px">
+              <p>Loading employees...</p>
+            </div>
+          </div>
+        </div>
+        <div class="conversation-panel" id="convPanel">
+          <div class="empty-panel">
+            <div class="empty-panel-icon">C</div>
+            <h3>Select an Employee</h3>
+            <p>Choose an employee from the list to view their Claude conversation history.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upload panel -->
+      <div class="view-panel view-upload">
+        <div class="upload-container">
+          <div class="upload-header">
+            <h2>Upload Conversation Data</h2>
+            <p>Upload JSON files from Claude Enterprise. Old data is never replaced -- each upload adds to the archive.</p>
+          </div>
+          <form id="uploadForm">
+            <div class="upload-grid">
+              <div class="upload-zone users" id="dropUsers" onclick="document.getElementById('fileUsers').click()">
+                <div class="upload-zone-icon">U</div>
+                <h3>Users File</h3>
+                <p>Stored in <code>user/</code> directory (multiple files merge)</p>
+                <div class="file-name" id="fileNameUsers"></div>
+                <input type="file" id="fileUsers" accept=".json" onchange="handleFileSelect(this, 'users')">
+              </div>
+              <div class="upload-zone conversations" id="dropConversations" onclick="document.getElementById('fileConversations').click()">
+                <div class="upload-zone-icon">C</div>
+                <h3>Conversations File</h3>
+                <p>Stored in <code>conversation/</code> directory (multiple files merge)</p>
+                <div class="file-name" id="fileNameConversations"></div>
+                <input type="file" id="fileConversations" accept=".json" onchange="handleFileSelect(this, 'conversations')">
+              </div>
+            </div>
+            <div class="upload-actions">
+              <button type="button" class="btn btn-outline" onclick="clearUploads()">Clear</button>
+              <button type="submit" class="btn btn-primary" id="uploadBtn">Upload Files</button>
+            </div>
+          </form>
+          <div class="upload-status" id="uploadStatus"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function downloadText(content, filename) {
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+function handleDownloadClick(e) {
+  e.preventDefault();
+  const el = e.currentTarget;
+  const raw = el.getAttribute('data-content');
+  const filename = el.getAttribute('data-fname');
+  const content = atob(raw);
+  downloadText(content, filename);
+}
+
+function b64(s) {
+  try { return btoa(unescape(encodeURIComponent(s))); } catch { return btoa(s); }
+}
+
+let users = [], conversations = [], filteredUsers = [];
+let selectedUserId = null;
+let uploadedFiles = { users: null, conversations: null };
+
+function switchView(view) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelector(`.nav-item.${view}`).classList.add('active');
+  const area = document.getElementById('mainArea');
+  area.classList.remove('view-users', 'view-upload', 'view-conversations');
+  area.classList.add(`view-${view}`);
+}
+
+async function loadData() {
+  try {
+    const [ur, cr] = await Promise.all([fetch('/api/users'), fetch('/api/conversations')]);
+    if (!ur.ok || !cr.ok) throw new Error('Failed to load');
+    users = await ur.json();
+    conversations = await cr.json();
+    const totalMsg = conversations.reduce((s, c) => s + (c.chat_messages ? c.chat_messages.length : 0), 0);
+    document.getElementById('statUsers').textContent = users.length;
+    document.getElementById('statConvs').textContent = conversations.length;
+    document.getElementById('statMsgs').textContent = totalMsg;
+    filterUsers();
+  } catch (e) {
+    console.error('Load error:', e);
+    document.getElementById('userList').innerHTML = '<div class="empty-panel" style="padding:30px"><p style="color:#ef4444">Failed to load data. Upload files first.</p></div>';
+  }
+}
+
+function filterUsers() {
+  const q = document.getElementById('userSearch').value.toLowerCase();
+  filteredUsers = users.filter(u => u.full_name.toLowerCase().includes(q) || u.email_address.toLowerCase().includes(q));
+  renderUsers();
+}
+
+function safeDate(v) {
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function renderUsers() {
+  const list = document.getElementById('userList');
+  if (!filteredUsers.length) {
+    list.innerHTML = '<div class="empty-panel" style="padding:30px"><p>No employees found</p></div>';
+    return;
+  }
+  list.innerHTML = filteredUsers.map(u => {
+    const ucs = conversations.filter(c => c.account?.uuid === u.uuid);
+    const msgs = ucs.reduce((s, c) => s + (c.chat_messages ? c.chat_messages.length : 0), 0);
+    const dates = ucs.map(c => safeDate(c.updated_at)).filter(Boolean);
+    const last = dates.length ? new Date(Math.max(...dates.map(d => d.getTime()))).toLocaleDateString() : 'Never';
+    return `<div class="user-card${selectedUserId === u.uuid ? ' selected' : ''}" onclick="selectUser('${u.uuid}')">
+      <div class="user-avatar">${esc(u.full_name.charAt(0).toUpperCase())}</div>
+      <div class="user-info">
+        <div class="user-name">${esc(u.full_name)}</div>
+        <div class="user-email">${esc(u.email_address)}</div>
+        <div class="user-stats">
+          <span>${ucs.length} conv</span>
+          <span>${msgs} msgs</span>
+          <span>${last}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function selectUser(uuid) {
+  selectedUserId = uuid;
+  renderUsers();
+  const panel = document.getElementById('convPanel');
+  panel.innerHTML = '<div class="empty-panel"><div class="spinner" style="width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#1e3c72;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:16px"></div><p>Loading conversations...</p></div>';
+  try {
+    const r = await fetch(`/api/conversations/${uuid}`);
+    if (!r.ok) throw new Error('Not found');
+    const d = await r.json();
+    renderConversations(d.user, d.conversations);
+  } catch (e) {
+    panel.innerHTML = '<div class="empty-panel"><p style="color:#ef4444">Failed to load conversations.</p></div>';
+  }
+}
+
+function extractText(m) {
+  let candidate = '';
+
+  function stripUnsupported(s) {
+    if (!s) return '';
+    return s.replace(/```\s*\nThis block is not supported on your current device yet\.\n```\s*/gi, '').replace(/\n{3,}/g, '\n\n').trim();
+  }
+
+  function isInternal(item) {
+    if (item.type === 'tool_use' && item.name === 'view') {
+      const p = item.input?.path || '';
+      return p.endsWith('.yaml') || p.includes('skills/') || p.includes('/skill') || (item.input?.description || '').startsWith('---');
+    }
+    return false;
+  }
+
+  function parseToolResult(item) {
+    const parts = [];
+    if (!Array.isArray(item.content)) return parts;
+    for (const sub of item.content) {
+      const raw = typeof sub === 'string' ? sub : (sub?.text || '');
+      if (!raw) continue;
+      if (raw.includes('PK\u0003\u0004')) continue;
+      if (/^\s*\d+\t---/.test(raw.trim())) continue;
+      let text = raw;
+      try {
+        const j = JSON.parse(raw);
+        if (j && typeof j === 'object') {
+          const out = (j.stdout || '').trim();
+          const err = (j.stderr || '').trim();
+          if (out && !err) text = out;
+          else if (out && err) text = out + (err ? '\n[stderr: ' + err.substring(0, 100) + ']' : '');
+          else if (err) text = '';
+          else text = '';
+        }
+      } catch {}
+      if (!text) continue;
+      if (text.length > 500) text = text.substring(0, 500) + '...';
+      parts.push(text);
+    }
+    return parts;
+  }
+
+  function toolLabel(item) {
+    const cmd = item.input?.command || '';
+    const desc = item.input?.description || '';
+    if (item.name === 'bash_tool') {
+      if (cmd.includes('extract-text')) {
+        const path = cmd.replace('extract-text ', '').trim().split('/').pop();
+        return '[Read file: ' + path + ']';
+      }
+      if (cmd.includes('python3') || cmd.includes('python')) {
+        if (cmd.length > 80) return '[Ran script]';
+        return '[Ran: ' + cmd.substring(0, 60) + ']';
+      }
+      if (cmd.length > 60) return '[Ran command]';
+      return '[$ ' + cmd + ']';
+    }
+    if (item.name === 'create_file') return '[Created: ' + (desc || item.input?.filepath?.split('/').pop() || 'file') + ']';
+    if (item.name === 'present_files') {
+      const paths = Array.isArray(item.input?.filepaths) ? item.input.filepaths.map(p => p.split('/').pop()).join(', ') : '';
+      return '[Generated: ' + (paths || 'files') + ']';
+    }
+    if (item.name === 'visualize:show_widget' || item.name === 'visualize:read_me') return '[Built presentation]';
+    if (item.name === 'ask_user_input_v0') return '[Asked: ' + (item.input?.questions?.[0]?.question || 'question') + ']';
+    return '';
+  }
+
+  if (m.text) {
+    const clean = stripUnsupported(m.text);
+    if (clean && !clean.startsWith('```') && !clean.endsWith('```')) candidate = clean;
+  }
+
+  if (Array.isArray(m.content) && m.content.length) {
+    const textBlocks = [];
+    const actions = [];
+
+    for (const item of m.content) {
+      if (!item || !item.type) continue;
+      if (isInternal(item)) continue;
+      if (item.type === 'text' && item.text) {
+        const clean = stripUnsupported(item.text);
+        if (clean) textBlocks.push(clean);
+      } else if (item.type === 'tool_use') {
+        const label = toolLabel(item);
+        if (label) actions.push(label);
+      } else if (item.type === 'tool_result') {
+        const resultParts = parseToolResult(item);
+        if (resultParts.length) {
+          for (const rp of resultParts) {
+            if (rp.length < 200 && !rp.includes('\n')) actions.push(rp);
+            else textBlocks.push(rp);
+          }
+        }
+      } else if (item.type === 'thinking') {
+        const think = stripUnsupported(item.thinking || '');
+        if (think) actions.push('[Thinking]');
+      }
+    }
+
+    const out = [];
+    if (textBlocks.length) out.push(textBlocks.join('\n\n'));
+    if (actions.length) {
+      const grouped = [];
+      let count = 0;
+      for (const a of actions) {
+        if (a.startsWith('[') && a.endsWith(']') && a.length < 120) {
+          count++;
+          if (count === 1) grouped.push(a);
+          else if (count === 2 && grouped[grouped.length - 1] !== '[...]') { grouped.pop(); grouped.push('[...]'); }
+        } else {
+          grouped.push(a);
+          count = 0;
+        }
+      }
+      if (grouped.length) out.push(grouped.join('\n'));
+    }
+    if (out.length) return out.join('\n\n');
+  }
+
+  if (candidate) return candidate;
+  return '';
+}
+
+function renderConversations(user, convs) {
+  const panel = document.getElementById('convPanel');
+  if (!convs.length) {
+    panel.innerHTML = '<div class="conversation-header"><h2>' + esc(user.full_name) + '</h2><p>' + esc(user.email_address) + '</p></div>' +
+      '<div class="empty-panel"><div class="empty-panel-icon">C</div><h3>No Conversations</h3><p>No Claude conversations found for this employee.</p></div>';
+    return;
+  }
+  const total = convs.reduce((s, c) => s + (c.chat_messages ? c.chat_messages.length : 0), 0);
+  const createdDates = convs.map(c => safeDate(c.created_at)).filter(Boolean);
+  const started = createdDates.length ? new Date(Math.min(...createdDates.map(d => d.getTime()))).toLocaleDateString() : 'Unknown';
+  panel.innerHTML = '<div class="conversation-header">' +
+    '<h2>' + esc(user.full_name) + '</h2>' +
+    '<p>' + esc(user.email_address) + '</p>' +
+    '<div class="conversation-meta">' +
+      '<span>Conversations: <strong>' + convs.length + '</strong></span>' +
+      '<span>Messages: <strong>' + total + '</strong></span>' +
+      '<span>Started: <strong>' + started + '</strong></span>' +
+    '</div>' +
+  '</div>' +
+  '<div class="messages-view">' + convs.map(c => {
+    const msgs = Array.isArray(c.chat_messages) ? c.chat_messages : [];
+    const cd = safeDate(c.created_at);
+    const d = cd ? cd.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }) : 'Unknown date';
+    return '<div style="margin-bottom:28px">' +
+      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;font-size:.8rem;color:#94a3b8">' +
+        '<span style="flex:1;height:1px;background:#e2e8f0"></span>' +
+        '<span>' + d + '</span>' +
+        '<span style="flex:1;height:1px;background:#e2e8f0"></span>' +
+      '</div>' +
+      msgs.filter(m => {
+        const msgText = extractText(m);
+        if (msgText) return true;
+        if (Array.isArray(m.files) && m.files.some(f => f?.file_name || f?.file_uuid)) return true;
+        if (Array.isArray(m.attachments) && m.attachments.some(a => a?.extracted_content || a?.file_type || a?.file_name)) return true;
+        return false;
+      }).map(m => {
+        const isUser = m.sender === 'human';
+        const mt = safeDate(m.created_at);
+        const t = mt ? mt.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) : '';
+        const msgText = extractText(m);
+        const extras = [];
+        if (Array.isArray(m.files)) {
+          const names = m.files.filter(f => f && f.file_name).map(f => {
+            const ext = f.file_name.split('.').pop().toLowerCase();
+            const canDownload = ['txt', 'csv', 'tsv', 'md', 'json', 'xml', 'html', 'css', 'js', 'py', 'log'].includes(ext);
+            return esc(f.file_name) + (canDownload ? '' : ' <span style="color:#94a3b8;font-weight:400">(not available)</span>');
+          });
+          if (names.length) extras.push('<div style="margin-top:8px">' + names.map(n => '<span style="display:inline-block;background:#f1f5f9;padding:2px 8px;border-radius:4px;font-size:.72rem;color:#64748b;margin-right:4px">' + n + '</span>').join('') + '</div>');
+        }
+        if (Array.isArray(m.attachments)) {
+          for (const a of m.attachments) {
+            if (a && a.extracted_content) {
+              const label = a.file_name || (a.type ? '.' + a.type : 'attachment');
+              const fname = (a.file_name || 'attachment') + '.' + (a.type || 'txt');
+              extras.push('<details style="margin-top:8px;font-size:.82rem">' +
+                '<summary style="cursor:pointer;color:#475569;font-weight:500;padding:4px 0">Attachment: ' + esc(label) +
+                ' <a href="#" data-content="' + b64(a.extracted_content) + '" data-fname="' + esc(fname) + '" onclick="handleDownloadClick(event)" style="color:#2563eb;text-decoration:underline;font-weight:400;margin-left:8px"> Download</a>' +
+                '</summary>' +
+                '<pre style="margin-top:6px;padding:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;font-size:.8rem;line-height:1.5;overflow-x:auto;white-space:pre-wrap">' + esc(a.extracted_content) + '</pre></details>');
+            } else if (a && a.type) {
+              extras.push('<span style="display:inline-block;background:#f1f5f9;padding:2px 8px;border-radius:4px;font-size:.72rem;color:#64748b;margin-top:4px;margin-right:4px">.' + esc(a.type) + '</span>');
+            }
+          }
+        }
+        return '<div class="message ' + (isUser ? 'user' : 'claude') + '">' +
+          '<div class="message-bubble">' +
+            '<div class="message-sender">' + (isUser ? 'Employee' : 'Claude') + '</div>' +
+            (msgText ? '<div class="message-text">' + esc(msgText) + '</div>' : '') +
+            extras.join('') +
+            '<span class="message-time">' + t + '</span>' +
+          '</div>' +
+        '</div>';
+      }).join('') +
+    '</div>';
+  }).join('') + '</div>';
+}
+
+function handleFileSelect(input, type) {
+  const file = input.files[0];
+  if (!file) return;
+  uploadedFiles[type] = file;
+  const zone = type === 'users' ? document.getElementById('dropUsers') : document.getElementById('dropConversations');
+  const nameEl = type === 'users' ? document.getElementById('fileNameUsers') : document.getElementById('fileNameConversations');
+  zone.classList.add('uploaded');
+  nameEl.textContent = file.name;
+  document.getElementById('uploadBtn').disabled = !(uploadedFiles.users || uploadedFiles.conversations);
+}
+
+document.getElementById('dropUsers').addEventListener('dragover', e => { e.preventDefault(); e.currentTarget.classList.add('dragover'); });
+document.getElementById('dropUsers').addEventListener('dragleave', e => { e.currentTarget.classList.remove('dragover'); });
+document.getElementById('dropUsers').addEventListener('drop', e => {
+  e.preventDefault(); e.currentTarget.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) { document.getElementById('fileUsers').files = e.dataTransfer.files; handleFileSelect(document.getElementById('fileUsers'), 'users'); }
+});
+document.getElementById('dropConversations').addEventListener('dragover', e => { e.preventDefault(); e.currentTarget.classList.add('dragover'); });
+document.getElementById('dropConversations').addEventListener('dragleave', e => { e.currentTarget.classList.remove('dragover'); });
+document.getElementById('dropConversations').addEventListener('drop', e => {
+  e.preventDefault(); e.currentTarget.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) { document.getElementById('fileConversations').files = e.dataTransfer.files; handleFileSelect(document.getElementById('fileConversations'), 'conversations'); }
+});
+
+function clearUploads() {
+  uploadedFiles = { users: null, conversations: null };
+  document.getElementById('fileUsers').value = '';
+  document.getElementById('fileConversations').value = '';
+  document.getElementById('dropUsers').classList.remove('uploaded');
+  document.getElementById('dropConversations').classList.remove('uploaded');
+  document.getElementById('fileNameUsers').textContent = '';
+  document.getElementById('fileNameConversations').textContent = '';
+  document.getElementById('uploadBtn').disabled = true;
+  document.getElementById('uploadStatus').className = 'upload-status';
+}
+
+document.getElementById('uploadForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const status = document.getElementById('uploadStatus');
+  const btn = document.getElementById('uploadBtn');
+  const fd = new FormData();
+  if (uploadedFiles.users) fd.append('users', uploadedFiles.users);
+  if (uploadedFiles.conversations) fd.append('conversations', uploadedFiles.conversations);
+  btn.disabled = true; btn.textContent = 'Uploading...';
+  status.className = 'upload-status';
+  try {
+    const r = await fetch('/api/upload/users', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.success) {
+      status.className = 'upload-status success';
+      status.innerHTML = `Files uploaded successfully: ${d.files.join(', ')}<div class="status-details">Data refreshed. You can now view employee conversations.</div>`;
+      clearUploads();
+      setTimeout(() => { status.className = 'upload-status'; }, 5000);
+      loadData();
+    } else { throw new Error('Upload failed'); }
+  } catch (err) {
+    status.className = 'upload-status error';
+    status.innerHTML = `Upload failed: ${err.message}<div class="status-details">Please check file format and try again.</div>`;
+  }
+  btn.disabled = false; btn.textContent = 'Upload Files';
+});
+
+document.addEventListener('DOMContentLoaded', loadData);
+</script>
+</body>
+</html>
